@@ -1,0 +1,17 @@
+# Node.js
+node_modules/
+.env
+
+# Android
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# OS
+Thumbs.db
+.DS_Store
