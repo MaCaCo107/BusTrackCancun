@@ -1,0 +1,31 @@
+name: BusTrack CI Pipeline
+
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest 
+
+    steps:
+    
+    - name: Checkout del código
+      uses: actions/checkout@v3
+
+  
+    - name: Configurar Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    
+    - name: Construir Imagen de Docker
+     
+      working-directory: ./backend 
+      run: |
+        docker build -t bustrack-backend:latest .
+        docker image ls
