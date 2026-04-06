@@ -23,6 +23,7 @@ data class LoginRequest(
 data class LoginResponse(
     @SerializedName("mensaje") val mensaje: String,
     @SerializedName("usuario") val usuario: UserData?
+
 )
 
 data class UserData(

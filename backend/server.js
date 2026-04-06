@@ -103,8 +103,8 @@ app.post('/api/reportar', async (req, res) => {
 //Iniciar Servidor
 const PORT = 3000;
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`Para tu App usa: http://192.168.1.82:${PORT}/api/usuarios`);
+    console.log(`Servidor corriendo  http://localhost:${PORT}`);
+    console.log(`App : http://***.1**.1.**:${PORT}/api/usuarios`);
 });
 
 // Obtener todas las rutas disponibles
@@ -152,6 +152,7 @@ const Reporte = require('./models/Reporte');
 
 
 app.get('/api/reportes', async (req, res) => {
+    console.time('Consulta_Reportes');
     try {
         const comentarios = await Reporte.find();
         res.status(200).json(comentarios);

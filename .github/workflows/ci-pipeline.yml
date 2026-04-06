@@ -25,7 +25,7 @@ jobs:
     
     - name: Construir Imagen de Docker
      
-      working-directory: ./backend-api
+      working-directory: ./backend
       run: |
         docker build -t bustrack-backend:latest .
         docker image ls
