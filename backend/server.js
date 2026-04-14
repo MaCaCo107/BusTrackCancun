@@ -9,11 +9,15 @@ const app = express();
 app.use(express.json()); 
 app.use(cors());         
 
-//Conexión a MongoDB Local
-mongoose.connect('mongodb://127.0.0.1:27017/busTrackDB')
-    .then(() => console.log('Conectado a MongoDB Local'))
-    .catch(err => console.error('Error de conexión:', err));
 
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/busTrackDB';
+
+mongoose.connect(MONGO_URI, { 
+    useNewUrlParser: true, 
+    useUnifiedTopology: true 
+})
+.then(() => console.log(`Conectado a MongoDB en: ${MONGO_URI}`))
+.catch(err => console.error('Error de conexión:', err));
 
 
 // Esquema para el Registro de Usuarios

@@ -1,0 +1,8 @@
+replicaCount: 2
+image:
+  repository: bustrack-backend
+  tag: latest
+service:
+  type: NodePort
+  puertoInterno: 3000
+  puertoExterno: 30001
