@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Ruta = require('./models/Ruta'); 
-
+const Reporte = require('./models/Reporte'); 
 const app = express();
 
 // Middleware
@@ -13,8 +13,7 @@ app.use(cors());
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/busTrackDB';
 
 mongoose.connect(MONGO_URI, { 
-    useNewUrlParser: true, 
-    useUnifiedTopology: true 
+    
 })
 .then(() => console.log(`Conectado a MongoDB en: ${MONGO_URI}`))
 .catch(err => console.error('Error de conexión:', err));
@@ -92,23 +91,12 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.post('/api/reportar', async (req, res) => {
-    try {
-        const nuevoReporte = new Reporte(req.body);
-        await nuevoReporte.save();
-        res.status(201).send({ mensaje: 'Reporte de ruta guardado' });
-    } catch (error) {
-        res.status(400).send({ error: 'Error al enviar reporte' });
-    }
-});
-
 
 
 //Iniciar Servidor
-const PORT = 3000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor corriendo  http://localhost:${PORT}`);
-    console.log(`App : http://***.1**.1.**:${PORT}/api/usuarios`);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Servidor BusTrack corriendo en el puerto ${PORT}`);
 });
 
 // Obtener todas las rutas disponibles
@@ -152,7 +140,7 @@ app.get('/api/rutas/buscar', async (req, res) => {
     }
 });
 
-const Reporte = require('./models/Reporte'); 
+
 
 
 app.get('/api/reportes', async (req, res) => {
@@ -177,7 +165,7 @@ app.post('/api/reportes', async (req, res) => {
         const nuevoReporte = new Reporte({
             titulo,
             descripcion,
-            nombreUsuario: nombreUsuario, // Guardar el usuario real de la sesión
+            nombreUsuario: nombreUsuario, 
             ubicacion: {
                 coordenadas: [longitud, latitud]
             }
@@ -187,6 +175,41 @@ app.post('/api/reportes', async (req, res) => {
         res.status(201).json({ mensaje: "¡Comentario publicado!", reporte: nuevoReporte });
 
     } catch (error) {
-        res.status(500).json({ error: "Error al publicar comentario" });
+        console.error("ERROR CRÍTICO EN BACKEND:", error);
+        res.status(500).json({ error: "Error al publicar comentario", detalle: error.message });
+    }
+});
+
+// ELIMINAR un reporte 
+app.delete('/api/reportes/:id', async (req, res) => {
+   try {
+        const reporteId = req.params.id;
+        const usuarioSolicitante = req.query.usuario; 
+        
+        console.log(`\n--- INTENTO DE BORRADO ---`);
+        console.log(`ID recibido: ${reporteId}`);
+        console.log(`Usuario que pide borrar: '${usuarioSolicitante}'`);
+
+        const reporte = await Reporte.findById(reporteId);
+        
+        if (!reporte) {
+            console.log("Resultado: El reporte ya no existe en la BD.");
+            return res.status(404).json({ error: "El reporte no existe" });
+        }
+
+        console.log(`Dueño real del reporte: '${reporte.nombreUsuario}'`);
+
+        if (reporte.nombreUsuario !== usuarioSolicitante) {
+            console.log("Resultado: BLOQUEADO POR SEGURIDAD. Los nombres no coinciden.");
+            return res.status(403).json({ error: "Acceso denegado" });
+        }
+
+        await Reporte.findByIdAndDelete(reporteId);
+        console.log("Resultado: Borrado exitoso.");
+        res.status(200).json({ mensaje: "Publicación eliminada correctamente" });
+
+    } catch (error) {
+        console.error("ERROR CRÍTICO:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });

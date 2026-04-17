@@ -3,7 +3,9 @@ package com.mayo.bustrackcancun.API
 import com.google.gson.annotations.SerializedName
 import okhttp3.ResponseBody
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -94,4 +96,10 @@ interface ApiService {
 
     @POST("api/reportes")
     fun crearReporte(@Body reporte: ReporteRequest): Call<ResponseBody>
+
+    @DELETE("api/reportes/{id}")
+    suspend fun eliminarReporte(
+        @Path("id") id: String,
+        @Query("usuario") usuario: String
+    ): Response<ResponseBody>
 }

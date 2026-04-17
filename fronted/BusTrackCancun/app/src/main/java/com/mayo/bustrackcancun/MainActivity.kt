@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -32,6 +33,7 @@ import com.mayo.bustrackcancun.API.ReporteRequest
 import com.mayo.bustrackcancun.API.ReporteResponse
 import com.mayo.bustrackcancun.API.Ruta
 import com.mayo.bustrackcancun.API.TrazadoResponse
+import kotlinx.coroutines.launch
 import okhttp3.ResponseBody
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
@@ -81,7 +83,7 @@ class MainActivity : AppCompatActivity() {
 
         // Inicializar Retrofit
         val retrofit = Retrofit.Builder()
-            .baseUrl("http://192.168.1.82:3000/")
+            .baseUrl("http://10.0.2.2:3000/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         apiService = retrofit.create(ApiService::class.java)
@@ -257,21 +259,32 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body() != null) {
                     runOnUiThread {
                         limpiarMapa()
-                        val customInfoWindow = CommentInfoWindow(R.layout.info_window_comment, map)
                         
                         response.body()?.forEach { reporte ->
                             val marker = Marker(map)
-
+                            // Posición: [longitud, latitud] -> [coords[0], coords[1]]
                             marker.position = GeoPoint(reporte.ubicacion.coords[1], reporte.ubicacion.coords[0])
                             
-
+                            marker.title = reporte.titulo
+                            // Limpiar fecha ISO para el snippet
+                            val cleanDate = reporte.fecha.split("T")[0]
+                            marker.snippet = "${reporte.descripcion}\nFecha: $cleanDate\nAutor: ${reporte.usuario}"
+                            
+                            // Icono: Círculo amarillo con icono
                             marker.icon = resources.getDrawable(R.drawable.ic_comment_marker, null)
                             marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                             
-
-                            marker.relatedObject = reporte
-                            marker.infoWindow = customInfoWindow
+                            // Usar el CustomMarkerInfoWindow con lógica de seguridad
+                            val customInfoWindow = CustomMarkerInfoWindow(
+                                map,
+                                reporte.id,
+                                reporte.usuario,
+                                activeUserName
+                            ) { id ->
+                                eliminarReporte(id, marker)
+                            }
                             
+                            marker.infoWindow = customInfoWindow
                             map.overlays.add(marker)
                         }
                         map.invalidate()
@@ -282,6 +295,24 @@ class MainActivity : AppCompatActivity() {
                 Log.e("API_ERROR", "Error al cargar reportes: ${t.message}")
             }
         })
+    }
+
+    private fun eliminarReporte(id: String, marker: Marker) {
+        lifecycleScope.launch {
+            try {
+                val response = apiService.eliminarReporte(id, activeUserName)
+                if (response.isSuccessful) {
+                    Toast.makeText(this@MainActivity, "Publicación eliminada", Toast.LENGTH_SHORT).show()
+                    map.overlays.remove(marker)
+                    map.invalidate()
+                } else {
+                    Toast.makeText(this@MainActivity, "Error al eliminar: ${response.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e("DELETE_ERROR", "Falla en la petición", e)
+                Toast.makeText(this@MainActivity, "Error de conexión", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun showNewCommentDialog(point: GeoPoint) {
@@ -315,7 +346,7 @@ class MainActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { dialog.dismiss() }
 
         btnPublish.setOnClickListener {
-
+            // Recuperar nombre de usuario real de SharedPreferences justo antes del envío
             val sharedPref = getSharedPreferences("BusTrackPrefs", MODE_PRIVATE)
             val realUserName = sharedPref.getString("userName", activeUserName) ?: "Usuario"
 
@@ -501,7 +532,7 @@ class MainActivity : AppCompatActivity() {
         map.onPause()
     }
 
-
+    // Clase interna para manejar la ventana de información personalizada
     inner class CommentInfoWindow(layoutResId: Int, mapView: MapView) : InfoWindow(layoutResId, mapView) {
         override fun onOpen(item: Any?) {
             val marker = item as Marker
@@ -517,11 +548,11 @@ class MainActivity : AppCompatActivity() {
             tvDesc.text = reporte.descripcion
             tvUser.text = "Publicado por: ${reporte.usuario}"
             
-
+            // Limpiar fecha ISO (YYYY-MM-DDTHH:mm:ss.sssZ -> YYYY-MM-DD)
             val cleanDate = reporte.fecha.split("T")[0]
             tvDate.text = "Fecha: $cleanDate"
             
-
+            // Cerrar al hacer clic en la propia ventana
             view.setOnClickListener { close() }
         }
 
